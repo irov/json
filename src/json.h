@@ -10,11 +10,21 @@ typedef size_t js_size_t;
 typedef int64_t js_integer_value_t;
 typedef double js_real_value_t;
 
+#ifndef JS_SUCCESSFUL
 #define JS_SUCCESSFUL ((js_result_t)0)
-#define JS_FAILURE ((js_result_t)1)
+#endif
 
+#ifndef JS_FAILURE
+#define JS_FAILURE ((js_result_t)1)
+#endif
+
+#ifndef JS_FALSE
 #define JS_FALSE ((js_bool_t)0)
+#endif
+
+#ifndef JS_TRUE
 #define JS_TRUE ((js_bool_t)1)
+#endif
 
 #ifndef JS_UNUSED
 #define JS_UNUSED(X) (void)(X)
@@ -22,6 +32,14 @@ typedef double js_real_value_t;
 
 #ifndef JS_NULLPTR
 #define JS_NULLPTR ((void*)0)
+#endif
+
+#ifndef JS_ALLOCATOR_MEMORY_CHECK_ENABLE
+#   ifdef _DEBUG
+#       define JS_ALLOCATOR_MEMORY_CHECK_ENABLE 1
+#   else
+#       define JS_ALLOCATOR_MEMORY_CHECK_ENABLE 0
+#   endif
 #endif
 
 typedef enum js_type_e
@@ -44,16 +62,29 @@ typedef enum js_flags_e
 
 typedef struct js_element_t js_element_t;
 
+typedef void * (*js_alloc_fun_t)(size_t size, void * ud);
+typedef void (*js_free_fun_t)(void * ptr, void * ud);
+
 typedef struct js_allocator_t
 {
-    void * (*alloc)(size_t size, void * ud);
-    void (*free)(void * ptr, void * ud);
-    void (*failed)(const char * _pointer, const char * _end, const char * _message, void * _ud);
+    js_alloc_fun_t alloc;
+    js_free_fun_t free;
     void * ud;
-    js_flags_e flags;
 } js_allocator_t;
 
-js_result_t js_parse( js_allocator_t _allocator, const char * _data, js_size_t _size, js_element_t ** _element );
+typedef struct js_buffer_t
+{
+    uint8_t * memory;
+    uint8_t * end;
+} js_buffer_t;
+
+void js_make_buffer( void * _memory, js_size_t _capacity, js_buffer_t * const _buffer );
+void js_make_allocator_buffer( js_buffer_t * _buffer, js_allocator_t * const _allocator );
+void js_make_allocator_default( js_alloc_fun_t _alloc, js_free_fun_t _free, void * ud, js_allocator_t * const _allocator );
+
+typedef void (*js_failed_fun_t)(const char * _pointer, const char * _end, const char * _message, void * _ud);
+
+js_result_t js_parse( js_allocator_t _allocator, js_flags_e _flags, const char * _data, js_size_t _size, js_failed_fun_t _failed, void * _ud, js_element_t ** _element );
 void js_free( js_element_t * _element );
 
 js_type_e js_type( const js_element_t * _element );
