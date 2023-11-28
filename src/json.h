@@ -7,11 +7,14 @@ typedef uint8_t js_result_t;
 typedef uint8_t js_bool_t;
 typedef size_t js_size_t;
 
-static const js_result_t JS_SUCCESSFUL = 0;
-static const js_result_t JS_FAILURE = 1;
+typedef int64_t js_integer_value_t;
+typedef double js_real_value_t;
 
-static const js_bool_t JS_FALSE = 0;
-static const js_bool_t JS_TRUE = 1;
+#define JS_SUCCESSFUL ((js_result_t)0)
+#define JS_FAILURE ((js_result_t)1)
+
+#define JS_FALSE ((js_bool_t)0)
+#define JS_TRUE ((js_bool_t)1)
 
 #ifndef JS_UNUSED
 #define JS_UNUSED(X) (void)(X)
@@ -36,6 +39,7 @@ typedef enum js_flags_e
 {
     js_flag_none = 0,
     js_flag_string_inplace = 1 << 0,
+    js_flag_node_pool = 1 << 1,
 } js_flags_e;
 
 typedef struct js_element_t js_element_t;
@@ -44,16 +48,13 @@ typedef struct js_allocator_t
 {
     void * (*alloc)(size_t size, void * ud);
     void (*free)(void * ptr, void * ud);
+    void (*failed)(const char * _pointer, const char * _end, const char * _message, void * _ud);
     void * ud;
     js_flags_e flags;
-
-    js_element_t * cache_null;
-    js_element_t * cache_false;
-    js_element_t * cache_true;
 } js_allocator_t;
 
-js_result_t js_parse( js_allocator_t * _allocator, const void * _data, js_size_t _size, js_element_t ** _element );
-void js_free( js_allocator_t * _allocator, js_element_t * _element );
+js_result_t js_parse( js_allocator_t _allocator, const char * _data, js_size_t _size, js_element_t ** _element );
+void js_free( js_element_t * _element );
 
 js_type_e js_type( const js_element_t * _element );
 
@@ -66,8 +67,8 @@ js_bool_t js_is_array( const js_element_t * _element );
 js_bool_t js_is_object( const js_element_t * _element );
 
 js_bool_t js_get_boolean( const js_element_t * _element );
-int64_t js_get_integer( const js_element_t * _element );
-double js_get_real( const js_element_t * _element );
+js_integer_value_t js_get_integer( const js_element_t * _element );
+js_real_value_t js_get_real( const js_element_t * _element );
 void js_get_string( const js_element_t * _element, const char ** _value, js_size_t * const _size );
 
 js_size_t js_array_size( const js_element_t * _element );
