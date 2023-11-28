@@ -7,6 +7,8 @@ set(SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/json.c
 )
 
+SOURCE_GROUP(json FILES ${SOURCES})
+
 include_directories(${CMAKE_CURRENT_SOURCE_DIR})
 
 add_library(${PROJECT_NAME} STATIC ${SOURCES})

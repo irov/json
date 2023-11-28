@@ -113,8 +113,24 @@ static js_string_t * __js_string_create( js_allocator_t * _allocator, const char
     string->base.next = JS_NULLPTR;
     string->base.prev = JS_NULLPTR;
 
-    string->value = _value;
-    string->size = _size;
+    if( _allocator->flags & js_flag_string_inplace )
+    {
+        string->value = _value;
+        string->size = _size;
+    }
+    else
+    {
+        char * value = (char *)_allocator->alloc( _size + 1, _allocator->ud );
+        for( js_size_t index = 0; index != _size; ++index )
+        {
+            value[index] = _value[index];
+        }
+
+        value[_size] = '\0';
+
+        string->value = value;
+        string->size = _size;
+    }
 
     return string;
 }
@@ -625,6 +641,89 @@ js_result_t js_parse( js_allocator_t * _allocator, const void * _data, js_size_t
     *_element = (js_element_t *)object;
 
     return JS_SUCCESSFUL;
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_free_element( js_allocator_t * _allocator, js_element_t * _element );
+static void __js_free_array( js_allocator_t * _allocator, js_array_t * _array );
+static void __js_free_object( js_allocator_t * _allocator, js_object_t * _object );
+//////////////////////////////////////////////////////////////////////////
+static void __js_free_string( js_allocator_t * _allocator, js_string_t * _string )
+{
+    if( _allocator->flags & js_flag_string_inplace )
+    {
+        _allocator->free( (void *)_string->value, _allocator->ud );
+    }
+
+    _allocator->free( _string, _allocator->ud );
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_free_element( js_allocator_t * _allocator, js_element_t * _element )
+{
+    js_type_e type = js_type( _element );
+
+    if( type & 0x8 )
+    {
+        _allocator->free( _element, _allocator->ud );
+    } 
+    else if( type == js_type_string )
+    {
+        js_string_t * string = (js_string_t *)_element;
+
+        __js_free_string( _allocator, string );
+    } 
+    else if( type == js_type_array )
+    {
+        js_array_t * array = (js_array_t *)_element;
+
+        __js_free_array( _allocator, array );
+    }
+    else if( type == js_type_object )
+    {
+        js_object_t * object = (js_object_t *)_element;
+
+        __js_free_object( _allocator, object );
+    }
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_free_array( js_allocator_t * _allocator, js_array_t * _array )
+{
+    js_element_t * it_value = _array->values;
+
+    for( ; it_value != JS_NULLPTR; )
+    {
+        js_element_t * free_value = it_value;
+
+        it_value = it_value->next;
+        
+        __js_free_element( _allocator, free_value );
+    }
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_free_object( js_allocator_t * _allocator, js_object_t * _object )
+{
+    js_string_t * it_key = _object->keys;
+    js_element_t * it_value = _object->values;
+
+    for( ; it_key != JS_NULLPTR; )
+    {
+        js_string_t * free_key = it_key;
+        js_element_t * free_value = it_value;
+
+        it_key = (js_string_t *)it_key->base.next;
+        it_value = it_value->next;
+
+        __js_free_string( _allocator, free_key );
+        __js_free_element( _allocator, free_value );
+    }
+
+    _allocator->free( _object, _allocator->ud );
+}
+//////////////////////////////////////////////////////////////////////////
+void js_free( js_allocator_t * _allocator, js_element_t * _element )
+{
+    js_object_t * object = (js_object_t *)_element;
+
+    __js_free_object( _allocator, object );
 }
 //////////////////////////////////////////////////////////////////////////
 js_type_e js_type( const js_element_t * _element )

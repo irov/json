@@ -183,6 +183,7 @@ int main(int argc, char *argv[])
     js_allocator_t allocator;
     allocator.alloc = &__alloc;
     allocator.free = &__free;
+    allocator.flags = js_flag_none;
 
     js_element_t * obj;
     if( js_parse( &allocator, buff, sizeof( buff ), &obj ) == JS_FAILURE )
@@ -204,6 +205,8 @@ int main(int argc, char *argv[])
     printf( "}" );
 
     printf( "\n" );
+
+    js_free( &allocator, obj );
 
     return EXIT_SUCCESS;
 }

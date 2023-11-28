@@ -23,25 +23,37 @@ static const js_bool_t JS_TRUE = 1;
 
 typedef enum js_type_e
 {
-    js_type_null,
-    js_type_boolean,
-    js_type_integer,
-    js_type_real,
-    js_type_string,
-    js_type_array,
-    js_type_object,
+    js_type_null = 0,
+    js_type_boolean = 1 << 1,
+    js_type_integer = 1 << 2,
+    js_type_real = 1 << 3,
+    js_type_string = 1 << 4,
+    js_type_array = 1 << 5,
+    js_type_object = 1 << 6,
 } js_type_e;
+
+typedef enum js_flags_e
+{
+    js_flag_none = 0,
+    js_flag_string_inplace = 1 << 0,
+} js_flags_e;
+
+typedef struct js_element_t js_element_t;
 
 typedef struct js_allocator_t
 {
     void * (*alloc)(size_t size, void * ud);
     void (*free)(void * ptr, void * ud);
     void * ud;
+    js_flags_e flags;
+
+    js_element_t * cache_null;
+    js_element_t * cache_false;
+    js_element_t * cache_true;
 } js_allocator_t;
 
-typedef struct js_element_t js_element_t;
-
 js_result_t js_parse( js_allocator_t * _allocator, const void * _data, js_size_t _size, js_element_t ** _element );
+void js_free( js_allocator_t * _allocator, js_element_t * _element );
 
 js_type_e js_type( const js_element_t * _element );
 
