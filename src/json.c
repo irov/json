@@ -456,6 +456,10 @@ static void __js_array_destroy( js_document_t * _document, js_array_t * _array )
 
         _document->node_destroy( _document, free_node );
     }
+
+    js_allocator_t * allocator = __js_document_allocator( _document );
+
+    allocator->free( _array, allocator->ud );
 }
 //////////////////////////////////////////////////////////////////////////
 static void __js_object_destroy( js_document_t * _document, js_object_t * _object )

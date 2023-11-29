@@ -113,7 +113,7 @@ static void __js_array_print( size_t _index, const js_element_t * _element, void
         }break;
     case js_type_object:
         {
-            printf( "{\n" );
+            printf( "{" );
 
             ctx->tab += 1;
 
@@ -129,11 +129,6 @@ static void __js_array_print( size_t _index, const js_element_t * _element, void
 static void __js_object_print( size_t _index, const char * _key, size_t _size, const js_element_t * _element, void * _ud )
 {
     js_print_ctx_t * ctx = (js_print_ctx_t *)_ud;
-
-    for( int i = 0; i != ctx->tab; ++i )
-    {
-        printf( "\t" );
-    }
 
     if( _index != 0 )
     {
@@ -190,7 +185,7 @@ static void __js_object_print( size_t _index, const char * _key, size_t _size, c
         }break;
     case js_type_object:
         {
-            printf( "{\n" );
+            printf( "{" );
 
             ctx->tab += 1;
 
@@ -241,7 +236,7 @@ int main(int argc, char *argv[])
     js_print_ctx_t ctx;
     ctx.tab = 0;
 
-    printf( "{" );
+    printf( "base: {" );
     js_object_foreach( obj, &__js_object_print, &ctx );
     printf( "}" );
 
@@ -255,15 +250,23 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
+    printf( "patch: {" );
+    js_object_foreach( patch, &__js_object_print, &ctx );
+    printf( "}" );
+
+    printf( "\n" );
+
     js_element_t * total;
     if( js_patch( allocator, js_flag_none | js_flag_node_pool, obj, patch, &total ) == JS_FAILURE )
     {
         return EXIT_FAILURE;
     }
 
-    printf( "{" );
+    printf( "total: {" );
     js_object_foreach( total, &__js_object_print, &ctx );
     printf( "}" );
+
+    printf( "\n" );
 
     js_free( obj );
     js_free( patch );
