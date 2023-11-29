@@ -205,7 +205,7 @@ static void __js_object_print( size_t _index, const char * _key, size_t _size, c
 
 int main(int argc, char *argv[])
 {
-    char json[] = "{\"name\":1.34,\"age\":18,\"age1\":19,\"floor\":[1,-1,255,-255,256,-256,0,1,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,\"sdasdasda\",1,true,false,true,null,false,true,0.0,1.0,true  \n,\nfalse\n, null,  2.3,\"male\"], \"test\":[], \"blood\":{}, \"food\":[{\n}]}";
+    char json_base[] = "{\"name\":1.34,\"age\":18,\"age1\":19,\"floor\":[1,-1,255,-255,256,-256,0,1,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,\"sdasdasda\",1,true,false,true,null,false,true,0.0,1.0,true  \n,\nfalse\n, null,  2.3,\"male\"], \"test\":[], \"blood\":{}, \"food\":[{\n}]}";
 
     //js_allocator_t allocator;
     //allocator.alloc = &__alloc;
@@ -227,7 +227,7 @@ int main(int argc, char *argv[])
     js_make_allocator_default( &__alloc, &__free, &stats, &allocator );
 
     js_element_t * obj;
-    if( js_parse( allocator, js_flag_none | js_flag_node_pool, json, sizeof( json ), &__failed, JS_NULLPTR, &obj ) == JS_FAILURE )
+    if( js_parse( allocator, js_flag_none | js_flag_node_pool, json_base, sizeof( json_base ), &__failed, JS_NULLPTR, &obj ) == JS_FAILURE )
     {
         return EXIT_FAILURE;
     }
@@ -242,15 +242,35 @@ int main(int argc, char *argv[])
     ctx.tab = 0;
 
     printf( "{" );
-    js_object_foreach( obj, __js_object_print, &ctx );
+    js_object_foreach( obj, &__js_object_print, &ctx );
     printf( "}" );
 
     printf( "\n" );
 
+    char json_patch[] = "{\"age\":19,\"floor\":null}";
+
+    js_element_t * patch;
+    if( js_parse( allocator, js_flag_none | js_flag_node_pool, json_patch, sizeof( json_patch ), &__failed, JS_NULLPTR, &patch ) == JS_FAILURE )
+    {
+        return EXIT_FAILURE;
+    }
+
+    js_element_t * total;
+    if( js_patch( allocator, js_flag_none | js_flag_node_pool, obj, patch, &total ) == JS_FAILURE )
+    {
+        return EXIT_FAILURE;
+    }
+
+    printf( "{" );
+    js_object_foreach( total, &__js_object_print, &ctx );
+    printf( "}" );
+
     js_free( obj );
+    js_free( patch );
+    js_free( total );
 
     printf( "json size: %zu\n"
-        , sizeof( json )
+        , sizeof( json_base )
     );
 
     printf( "memory leak: %zu count: %zu peak: %zu\n"

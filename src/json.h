@@ -85,6 +85,9 @@ void js_make_allocator_default( js_alloc_fun_t _alloc, js_free_fun_t _free, void
 typedef void (*js_failed_fun_t)(const char * _pointer, const char * _end, const char * _message, void * _ud);
 
 js_result_t js_parse( js_allocator_t _allocator, js_flags_e _flags, const char * _data, js_size_t _size, js_failed_fun_t _failed, void * _ud, js_element_t ** _element );
+js_result_t js_clone( js_allocator_t _allocator, js_flags_e _flags, const js_element_t * _base, js_element_t ** _total );
+js_result_t js_patch( js_allocator_t _allocator, js_flags_e _flags, const js_element_t * _base, const js_element_t * _patch, js_element_t ** _total );
+
 void js_free( js_element_t * _element );
 
 js_type_e js_type( const js_element_t * _element );
