@@ -62,8 +62,8 @@ typedef enum js_flags_e
 
 typedef struct js_element_t js_element_t;
 
-typedef void * (*js_alloc_fun_t)(size_t size, void * ud);
-typedef void (*js_free_fun_t)(void * ptr, void * ud);
+typedef void * (*js_alloc_fun_t)(size_t _size, void * _ud);
+typedef void (*js_free_fun_t)(void * _ptr, void * _ud);
 
 typedef struct js_allocator_t
 {
