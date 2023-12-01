@@ -6,6 +6,14 @@
 #define JS_NODEBLOCK_SIZE 64
 #endif
 
+#ifndef JSON_LLONG_MAX
+#define JSON_LLONG_MAX 9223372036854775807LL
+#endif
+
+#ifndef JSON_LLONG_MIN
+#define JSON_LLONG_MIN (-JSON_LLONG_MAX - 1LL)
+#endif
+
 #if JS_ALLOCATOR_MEMORY_CHECK_ENABLE
 #   define JS_ALLOCATOR_MEMORY_CHECK(Ptr, Ret) if( (Ptr) == JS_NULLPTR ) return (Ret);
 #   define JS_ALLOCATOR_MEMORY_CHECK(Ptr, Ret) if( (Ptr) == JS_NULLPTR ) return (Ret);
@@ -584,6 +592,105 @@ static js_result_t __js_array_add( js_document_t * _document, js_array_t * _arra
     return JS_SUCCESSFUL;
 }
 //////////////////////////////////////////////////////////////////////////
+static js_bool_t __js_isspace( char c )
+{
+    if( c == ' ' || c == '\t' || c == '\n' || c == '\r' || c == '\v' || c == '\f' )
+    {
+        return JS_TRUE;
+    }
+
+    return JS_FALSE;
+}
+//////////////////////////////////////////////////////////////////////////
+static js_bool_t __js_isdigit( char c )
+{
+    if( c >= '0' && c <= '9' )
+    {
+        return JS_TRUE;
+    }
+
+    return JS_FALSE;
+}
+//////////////////////////////////////////////////////////////////////////
+static int64_t __js_strtoll( const char * _in, const char * _end, const char ** _it )
+{
+    #define JS_STRTOLL_INCREASE_EOF() \
+        if( ++s == _end ) \
+        { \
+            *_it = _in; \
+            return 0; \
+        }
+
+    const char * s = _in;
+    int64_t value = 0;
+    int32_t neg = 0;
+    int32_t any = 0;
+
+    while( __js_isspace( *s ) == JS_TRUE )
+    {
+        JS_STRTOLL_INCREASE_EOF();
+    }
+
+    if( *s == '-' )
+    {
+        neg = 1;
+
+        JS_STRTOLL_INCREASE_EOF();
+    }
+    else if( *s == '+' )
+    {
+        JS_STRTOLL_INCREASE_EOF();
+    }
+
+    for( ;; )
+    {
+        char c = *s;
+
+        if( c == '\0' )
+        {
+            break;
+        }
+
+        int64_t d;
+        if( __js_isdigit( c ) == JS_TRUE )
+        {
+            d = c - '0';
+        }
+        else
+        {
+            break;
+        }
+
+        if( value > JSON_LLONG_MAX / 10 || (value == JSON_LLONG_MAX / 10 && c > JSON_LLONG_MAX % 10) )
+        {
+            value = neg ? JSON_LLONG_MIN : JSON_LLONG_MAX;
+
+            break;
+        }
+
+        value = value * 10 + d;
+        any = 1;
+
+        JS_STRTOLL_INCREASE_EOF();
+    }
+
+    if( neg == 1 )
+    {
+        value = -value;
+    }
+
+    if( any == 1 )
+    {
+        *_it = s;
+    }
+    else
+    {
+        *_it = _in;
+    }
+
+    return value;
+}
+//////////////////////////////////////////////////////////////////////////
 static const char * __js_strpbrk( const char * _begin, const char * _end, const char * _str )
 {
     const char * it = _begin;
@@ -787,8 +894,8 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
 
             if( data_real == JS_NULLPTR )
             {
-                char * data_end;
-                long long value = strtoll( data_begin, &data_end, 10 );
+                const char * data_end;
+                int64_t value = __js_strtoll( data_begin, _end, &data_end );
 
                 if( data_begin == data_end )
                 {
