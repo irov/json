@@ -10,10 +10,6 @@
 #define JSON_LLONG_MAX 9223372036854775807LL
 #endif
 
-#ifndef JSON_LLONG_MIN
-#define JSON_LLONG_MIN (-JSON_LLONG_MAX - 1LL)
-#endif
-
 #if JS_ALLOCATOR_MEMORY_CHECK_ENABLE
 #   define JS_ALLOCATOR_MEMORY_CHECK(Ptr, Ret) if( (Ptr) == JS_NULLPTR ) return (Ret);
 #   define JS_ALLOCATOR_MEMORY_CHECK(Ptr, Ret) if( (Ptr) == JS_NULLPTR ) return (Ret);
@@ -622,9 +618,9 @@ static int64_t __js_strtoll( const char * _in, const char * _end, const char ** 
         }
 
     const char * s = _in;
-    int64_t value = 0;
-    int32_t neg = 0;
-    int32_t any = 0;
+    
+    js_bool_t neg = JS_FALSE;
+    js_bool_t any = JS_FALSE;
 
     while( __js_isspace( *s ) == JS_TRUE )
     {
@@ -633,7 +629,7 @@ static int64_t __js_strtoll( const char * _in, const char * _end, const char ** 
 
     if( *s == '-' )
     {
-        neg = 1;
+        neg = JS_TRUE;
 
         JS_STRTOLL_INCREASE_EOF();
     }
@@ -641,6 +637,8 @@ static int64_t __js_strtoll( const char * _in, const char * _end, const char ** 
     {
         JS_STRTOLL_INCREASE_EOF();
     }
+
+    int64_t value = 0;
 
     for( ;; )
     {
@@ -661,32 +659,33 @@ static int64_t __js_strtoll( const char * _in, const char * _end, const char ** 
             break;
         }
 
-        if( value > JSON_LLONG_MAX / 10 || (value == JSON_LLONG_MAX / 10 && c > JSON_LLONG_MAX % 10) )
+        if( value > JSON_LLONG_MAX / 10 )
         {
-            value = neg ? JSON_LLONG_MIN : JSON_LLONG_MAX;
+            *_it = _in;
 
-            break;
+            return 0;
         }
 
         value = value * 10 + d;
-        any = 1;
+
+        any = JS_TRUE;
 
         JS_STRTOLL_INCREASE_EOF();
     }
 
-    if( neg == 1 )
+    if( neg == JS_TRUE )
     {
         value = -value;
     }
 
-    if( any == 1 )
-    {
-        *_it = s;
-    }
-    else
+    if( any == JS_FALSE )
     {
         *_it = _in;
+
+        return 0;
     }
+
+    *_it = s;
 
     return value;
 }
