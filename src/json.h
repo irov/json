@@ -1,6 +1,7 @@
 #ifndef JSON_H_
 #define JSON_H_
 
+#include <stddef.h>
 #include <stdint.h>
 
 typedef uint8_t js_result_t;
@@ -35,7 +36,7 @@ typedef double js_real_value_t;
 #endif
 
 #ifndef JS_ALLOCATOR_MEMORY_CHECK_ENABLE
-#   ifdef _DEBUG
+#   ifndef NDEBUG
 #       define JS_ALLOCATOR_MEMORY_CHECK_ENABLE 1
 #   else
 #       define JS_ALLOCATOR_MEMORY_CHECK_ENABLE 0
