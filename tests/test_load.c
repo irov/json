@@ -48,160 +48,40 @@ static void __failed( const char * _data, const char * _end, const char * _messa
     printf( "failed: %s\n", _message );
 }
 //////////////////////////////////////////////////////////////////////////
-typedef struct js_print_ctx_t
+static char * __js_dump_buffer( js_size_t _size, void * _ud )
 {
-    int tab;
-} js_print_ctx_t;
-//////////////////////////////////////////////////////////////////////////
-static void __js_array_print( js_size_t _index, const js_element_t * _element, void * _ud );
-static void __js_object_print( js_size_t _index, const char * _key, js_size_t _size, const js_element_t * _element, void * _ud );
-//////////////////////////////////////////////////////////////////////////
-static void __js_array_print( js_size_t _index, const js_element_t * _element, void * _ud )
-{
-    js_print_ctx_t * ctx = (js_print_ctx_t *)_ud;
+    js_buffer_t * buffer = (js_buffer_t *)_ud;
 
-    if( _index != 0 )
+    if( buffer->memory + _size > buffer->end )
     {
-        printf( ", " );
+        buffer->memory = buffer->end;
+
+        return JS_NULLPTR;
     }
 
-    js_type_e type = js_type( _element );
+    uint8_t * new_buffer = buffer->memory;
 
-    switch( type )
-    {
-    case js_type_null:
-        {
-            printf( "null" );
-        }break;
-    case js_type_false:
-        {
-            printf( "false" );
-        }break;
-    case js_type_true:
-        {
-            printf( "true" );
-        }break;
-    case js_type_integer:
-        {
-            int64_t i = js_get_integer( _element );
-
-            printf( "%lld", i );
-        }break;
-    case js_type_real:
-        {
-            double r = js_get_real( _element );
-
-            printf( "%lf", r );
-        }break;
-    case js_type_string:
-        {
-            const char * s;
-            js_size_t z;
-            js_get_string( _element, &s, &z );
-
-            printf( "\"%.*s\"", z, s );
-        }break;
-    case js_type_array:
-        {
-            printf( "[" );
-
-            ctx->tab += 1;
-
-            js_array_foreach( _element, &__js_array_print, ctx );
-
-            ctx->tab -= 1;
-
-            printf( "]" );
-        }break;
-    case js_type_object:
-        {
-            printf( "{" );
-
-            ctx->tab += 1;
-
-            js_object_foreach( _element, &__js_object_print, ctx );
-
-            ctx->tab -= 1;
-
-            printf( "}" );
-        }break;
-    }
+    buffer->memory += _size;
+    
+    return (char *)new_buffer;
 }
 //////////////////////////////////////////////////////////////////////////
-static void __js_object_print( size_t _index, const char * _key, js_size_t _size, const js_element_t * _element, void * _ud )
+static void __js_print( const js_element_t * _element )
 {
-    js_print_ctx_t * ctx = (js_print_ctx_t *)_ud;
+    char dump_memory[2048];
 
-    if( _index != 0 )
-    {
-        printf( ", " );
-    }
+    js_buffer_t dump_buff;
+    js_make_buffer( dump_memory, sizeof( dump_memory ), &dump_buff );
 
-    printf( "\"%.*s\": ", _size, _key );
+    js_dump_ctx_t dump_ctx;
+    dump_ctx.buffer = &__js_dump_buffer;
+    dump_ctx.ud = &dump_buff;
 
-    js_type_e type = js_type( _element );
+    js_dump( _element, &dump_ctx );
 
-    switch( type )
-    {
-    case js_type_null:
-        {
-            printf( "null" );
-        }break;
-    case js_type_false:
-        {
-            printf( "false" );
-        }break;
-    case js_type_true:
-        {
-            printf( "true" );
-        }break;
-    case js_type_integer:
-        {
-            int64_t i = js_get_integer( _element );
-
-            printf( "%lld", i );
-        }break;
-    case js_type_real:
-        {
-            double r = js_get_real( _element );
-
-            printf( "%lf", r );
-        }break;
-    case js_type_string:
-        {
-            const char * s;
-            js_size_t z;
-            js_get_string( _element, &s, &z );
-
-            printf( "\"%.*s\"", z, s );
-        }break;
-    case js_type_array:
-        {
-            printf( "[" );
-
-            ctx->tab += 1;
-
-            js_array_foreach( _element, &__js_array_print, ctx );
-
-            ctx->tab -= 1;
-
-            printf( "]" );
-        }break;
-    case js_type_object:
-        {
-            printf( "{" );
-
-            ctx->tab += 1;
-
-            js_object_foreach( _element, &__js_object_print, ctx );
-
-            ctx->tab -= 1;
-
-            printf( "}" );
-        }break;
-    }
+    printf( "%s", dump_memory );
 }
-
+//////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[])
 {
     char json_base[] = "{\"name\":1.34,\"age\":18,\"age1\":19,\"floor\":[1,-1,255,-255,256,-256,0,1,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,0,1,2,3,4,5,6,7,8,9,10,11,12,23,34,56,76,\"sdasdasda\",1,true,false,true,null,false,true,0.0,1.0,true  \n,\nfalse\n, null,  2.3,\"male\"], \"test\":   \n[], \"blood\":{}, \"food\":[{\n}]}";
@@ -225,25 +105,20 @@ int main(int argc, char *argv[])
     //js_make_allocator_buffer( &buff, &allocator );
     js_make_allocator_default( &__alloc, &__free, &stats, &allocator );
 
-    js_element_t * obj;
-    if( js_parse( allocator, js_flag_none | js_flag_node_pool, json_base, sizeof( json_base ), &__failed, JS_NULLPTR, &obj ) == JS_FAILURE )
+    js_element_t * base;
+    if( js_parse( allocator, js_flag_none | js_flag_node_pool, json_base, sizeof( json_base ), &__failed, JS_NULLPTR, &base ) == JS_FAILURE )
     {
         return EXIT_FAILURE;
     }
 
-    const js_element_t * el_age = js_object_get( obj, "age" );
+    const js_element_t * el_age = js_object_get( base, "age" );
 
     int64_t l = js_get_integer( el_age );
 
     printf( "age: %lld\n", l );
 
-    js_print_ctx_t ctx;
-    ctx.tab = 0;
-
-    printf( "base: {" );
-    js_object_foreach( obj, &__js_object_print, &ctx );
-    printf( "}" );
-
+    printf( "base: " );
+    __js_print( base );
     printf( "\n" );
 
     char json_patch[] = "{\"age\":19,\"floor\":null}";
@@ -254,25 +129,21 @@ int main(int argc, char *argv[])
         return EXIT_FAILURE;
     }
 
-    printf( "patch: {" );
-    js_object_foreach( patch, &__js_object_print, &ctx );
-    printf( "}" );
-
+    printf( "patch: " );
+    __js_print( patch );
     printf( "\n" );
 
     js_element_t * total;
-    if( js_patch( allocator, js_flag_none | js_flag_node_pool, obj, patch, &total ) == JS_FAILURE )
+    if( js_patch( allocator, js_flag_none | js_flag_node_pool, base, patch, &total ) == JS_FAILURE )
     {
         return EXIT_FAILURE;
     }
 
-    printf( "total: {" );
-    js_object_foreach( total, &__js_object_print, &ctx );
-    printf( "}" );
-
+    printf( "total: " );
+    __js_print( total );
     printf( "\n" );
 
-    js_free( obj );
+    js_free( base );
     js_free( patch );
     js_free( total );
 

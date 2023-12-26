@@ -150,9 +150,7 @@ static js_true_t * __js_true_create( js_allocator_t * _allocator )
     return t;
 }
 //////////////////////////////////////////////////////////////////////////
-static js_integer_t * __js_integer_create( js_allocator_t * _allocator, js_integer_value_t _value )
-{
-#define __JS_DECLARE_POSINT( N ) { \
+#define JS_DECLARE_POSINT( N ) { \
     js_type_integer, N * 16 + 0}, \
     {js_type_integer, N * 16 + 1}, \
     {js_type_integer, N * 16 + 2}, \
@@ -169,8 +167,8 @@ static js_integer_t * __js_integer_create( js_allocator_t * _allocator, js_integ
     {js_type_integer, N * 16 + 13}, \
     {js_type_integer, N * 16 + 14}, \
     {js_type_integer, N * 16 + 15}
-
-#define __JS_DECLARE_NEGINT( N ) { \
+//////////////////////////////////////////////////////////////////////////
+#define JS_DECLARE_NEGINT( N ) { \
     js_type_integer, - N * 16 - 0}, \
     {js_type_integer, - N * 16 - 1}, \
     {js_type_integer, - N * 16 - 2}, \
@@ -187,14 +185,16 @@ static js_integer_t * __js_integer_create( js_allocator_t * _allocator, js_integ
     {js_type_integer, - N * 16 - 13}, \
     {js_type_integer, - N * 16 - 14}, \
     {js_type_integer, - N * 16 - 15}
-
+//////////////////////////////////////////////////////////////////////////
+static js_integer_t * __js_integer_create( js_allocator_t * _allocator, js_integer_value_t _value )
+{
     if( _value >= 0 && _value < 256 )
     {
         static js_integer_t cache_positive_integers[256] = {
-            __JS_DECLARE_POSINT( 0 ), __JS_DECLARE_POSINT( 1 ), __JS_DECLARE_POSINT( 2 ), __JS_DECLARE_POSINT( 3 ),
-            __JS_DECLARE_POSINT( 4 ), __JS_DECLARE_POSINT( 5 ), __JS_DECLARE_POSINT( 6 ), __JS_DECLARE_POSINT( 7 ),
-            __JS_DECLARE_POSINT( 8 ), __JS_DECLARE_POSINT( 9 ), __JS_DECLARE_POSINT( 10 ), __JS_DECLARE_POSINT( 11 ),
-            __JS_DECLARE_POSINT( 12 ), __JS_DECLARE_POSINT( 13 ), __JS_DECLARE_POSINT( 14 ), __JS_DECLARE_POSINT( 15 )
+            JS_DECLARE_POSINT( 0 ), JS_DECLARE_POSINT( 1 ), JS_DECLARE_POSINT( 2 ), JS_DECLARE_POSINT( 3 ),
+            JS_DECLARE_POSINT( 4 ), JS_DECLARE_POSINT( 5 ), JS_DECLARE_POSINT( 6 ), JS_DECLARE_POSINT( 7 ),
+            JS_DECLARE_POSINT( 8 ), JS_DECLARE_POSINT( 9 ), JS_DECLARE_POSINT( 10 ), JS_DECLARE_POSINT( 11 ),
+            JS_DECLARE_POSINT( 12 ), JS_DECLARE_POSINT( 13 ), JS_DECLARE_POSINT( 14 ), JS_DECLARE_POSINT( 15 )
         };
 
         js_integer_t * integer = cache_positive_integers + _value;
@@ -204,10 +204,10 @@ static js_integer_t * __js_integer_create( js_allocator_t * _allocator, js_integ
     else if( _value < 0 && _value > -256 )
     {
         static js_integer_t cache_negative_integers[256] = {
-            __JS_DECLARE_NEGINT( 0 ), __JS_DECLARE_NEGINT( 1 ), __JS_DECLARE_NEGINT( 2 ), __JS_DECLARE_NEGINT( 3 ),
-            __JS_DECLARE_NEGINT( 4 ), __JS_DECLARE_NEGINT( 5 ), __JS_DECLARE_NEGINT( 6 ), __JS_DECLARE_NEGINT( 7 ),
-            __JS_DECLARE_NEGINT( 8 ), __JS_DECLARE_NEGINT( 9 ), __JS_DECLARE_NEGINT( 10 ), __JS_DECLARE_NEGINT( 11 ),
-            __JS_DECLARE_NEGINT( 12 ), __JS_DECLARE_NEGINT( 13 ), __JS_DECLARE_NEGINT( 14 ), __JS_DECLARE_NEGINT( 15 )
+            JS_DECLARE_NEGINT( 0 ), JS_DECLARE_NEGINT( 1 ), JS_DECLARE_NEGINT( 2 ), JS_DECLARE_NEGINT( 3 ),
+            JS_DECLARE_NEGINT( 4 ), JS_DECLARE_NEGINT( 5 ), JS_DECLARE_NEGINT( 6 ), JS_DECLARE_NEGINT( 7 ),
+            JS_DECLARE_NEGINT( 8 ), JS_DECLARE_NEGINT( 9 ), JS_DECLARE_NEGINT( 10 ), JS_DECLARE_NEGINT( 11 ),
+            JS_DECLARE_NEGINT( 12 ), JS_DECLARE_NEGINT( 13 ), JS_DECLARE_NEGINT( 14 ), JS_DECLARE_NEGINT( 15 )
         };
 
         js_integer_t * integer = cache_negative_integers - _value;
@@ -1599,8 +1599,6 @@ js_result_t js_clone( js_allocator_t _allocator, js_flags_e _flags, const js_ele
 //////////////////////////////////////////////////////////////////////////
 static js_result_t __js_patch_object( js_document_t * _document, js_object_t * _object, const js_object_t * _patch )
 {
-    js_allocator_t * allocator = __js_document_allocator( _document );
-
     js_node_t * it_object_key = _object->keys;
     js_node_t * it_object_value = _object->values;
 
@@ -1961,12 +1959,6 @@ void js_array_foreach( const js_element_t * _element, js_array_foreach_fun_t _fo
     }
 }
 //////////////////////////////////////////////////////////////////////////
-typedef struct __js_dump_data_t
-{    
-    const js_dump_buffer_t * buffer;
-    const js_dump_write_t * write;
-} __js_dump_data_t;
-//////////////////////////////////////////////////////////////////////////
 static void __js_memcpy( char * _dst, const char * _src, js_size_t _size )
 {
     while( _size-- )
@@ -1975,11 +1967,9 @@ static void __js_memcpy( char * _dst, const char * _src, js_size_t _size )
     }
 }
 //////////////////////////////////////////////////////////////////////////
-static void __js_dump_char( __js_dump_data_t * _data, char _value )
+static void __js_dump_char( js_dump_ctx_t * _ctx, char _value )
 {
-    const js_dump_buffer_t * buffer = _data->buffer;
-
-    char * dst = (*buffer->buffer)(1, buffer->ud);
+    char * dst = (*_ctx->buffer)(1, _ctx->ud);
 
     if( dst == JS_NULLPTR )
     {
@@ -1989,11 +1979,9 @@ static void __js_dump_char( __js_dump_data_t * _data, char _value )
     *(dst) = _value;
 }
 //////////////////////////////////////////////////////////////////////////
-static void __js_dump_string( __js_dump_data_t * _data, const char * _value, js_size_t _size )
+static void __js_dump_string( js_dump_ctx_t * _ctx, const char * _value, js_size_t _size )
 {
-    const js_dump_buffer_t * buffer = _data->buffer;
-
-    char * dst = (*buffer->buffer)(_size, buffer->ud);
+    char * dst = (*_ctx->buffer)(_size, _ctx->ud);
 
     if( dst == JS_NULLPTR )
     {
@@ -2003,12 +1991,173 @@ static void __js_dump_string( __js_dump_data_t * _data, const char * _value, js_
     __js_memcpy( dst, _value, _size );
 }
 //////////////////////////////////////////////////////////////////////////
-#define __JS_DUMP_INTERNAL(data, value) __js_dump_string(data, value, sizeof(value))
+#define JS_DUMP_INTERNAL(data, value) __js_dump_string(data, value, sizeof(value) - 1)
 //////////////////////////////////////////////////////////////////////////
-static void __js_dump_array( __js_dump_data_t * _data, const js_element_t * _element );
-static void __js_dump_object( __js_dump_data_t * _data, const js_element_t * _element );
+#define JS_MAX_INTEGER_SYMBOLS 20
 //////////////////////////////////////////////////////////////////////////
-static void __js_dump_element( const js_element_t * _element, __js_dump_data_t * _data )
+static void __js_dump_integer( js_dump_ctx_t * _ctx, js_integer_value_t _value )
+{
+    char symbols[JS_MAX_INTEGER_SYMBOLS];
+
+    char * it = symbols + JS_MAX_INTEGER_SYMBOLS;
+
+    js_bool_t negative = JS_FALSE;
+    
+    if( _value == 0 )
+    {
+        *--it = '0';
+    } 
+    else if( _value < 0 )
+    {
+        _value = -_value;
+
+        while( _value )
+        {
+            js_integer_value_t symbol = _value % 10;
+            _value /= 10;
+
+            *--it = '0' + (char)symbol;
+        }
+
+        *--it = '-';
+    }
+    else
+    {
+        while( _value )
+        {
+            js_integer_value_t symbol = _value % 10;
+            _value /= 10;
+
+            *--it = '0' + (char)symbol;
+        }
+    }
+
+    js_size_t symbols_size = JS_MAX_INTEGER_SYMBOLS - (it - symbols);
+
+    char * dst = (*_ctx->buffer)(symbols_size, _ctx->ud);
+
+    if( dst == JS_NULLPTR )
+    {
+        return;
+    }
+
+    __js_memcpy( dst, it, symbols_size );
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_double( js_dump_ctx_t * _ctx, double _value, int32_t _precision )
+{
+    if( _value == 0.0 )
+    {
+        JS_DUMP_INTERNAL( _ctx, "0.0" );
+
+        return;
+    }
+
+    if( _value < 0.0 )
+    {
+        _value = -_value;
+
+        __js_dump_char( _ctx, '-' );
+    }
+
+    double r = 0.0000000000000005;
+    double fr = _value + r;
+
+    int64_t i = (int64_t)fr;
+    fr -= (double)i;
+
+    if( i == 0 )
+    {
+        __js_dump_char( _ctx, '-' );
+    }
+    else
+    {
+        js_size_t n = 0;
+        
+        int64_t in = i;
+        while( in != 0 )
+        {
+            int64_t symbol = in % 10;
+            in /= 10;
+            ++n;
+        }
+
+        char * dst = (*_ctx->buffer)(n, _ctx->ud);
+
+        if( dst == JS_NULLPTR )
+        {
+            return;
+        }
+
+        char * p = dst + n;
+
+        while( n-- )
+        {
+            int64_t symbol = i % 10;
+            i /= 10;
+
+            *--p = '0' + (char)symbol;
+        }
+    }
+
+    __js_dump_char( _ctx, '.' );
+
+    if( fr == 0.0 )
+    {
+        __js_dump_char( _ctx, '0' );        
+    }
+    else
+    {
+        js_size_t n = 0;
+        js_size_t nz = 0;
+
+        double frn = fr;
+
+        while( _precision-- )
+        {
+            frn *= 10.0;
+
+            char c = (char)frn;
+            frn -= c;
+
+            ++n;
+
+            if( c != 0 )
+            {
+                nz = n;
+            }
+        }
+
+        if( nz == 0 )
+        {
+            __js_dump_char( _ctx, '0' );
+        }
+        else
+        {
+            char * dst = (*_ctx->buffer)(nz, _ctx->ud);
+
+            if( dst == JS_NULLPTR )
+            {
+                return;
+            }
+
+            while( nz-- )
+            {
+                fr *= 10.0;
+
+                char c = (char)fr;
+                fr -= c;
+
+                *dst++ = '0' + c;
+            }
+        }
+    }
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_array( js_dump_ctx_t * _ctx, const js_element_t * _element );
+static void __js_dump_object( js_dump_ctx_t * _ctx, const js_element_t * _element );
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_element( js_dump_ctx_t * _ctx, const js_element_t * _element )
 { 
     js_type_e type = js_type( _element );
 
@@ -2016,15 +2165,15 @@ static void __js_dump_element( const js_element_t * _element, __js_dump_data_t *
     {
     case js_type_null:
         {
-            __JS_DUMP_INTERNAL( _data, "null" );
+            JS_DUMP_INTERNAL( _ctx, "null" );
         }break;
     case js_type_false:
         {
-            __JS_DUMP_INTERNAL( _data, "false" );
+            JS_DUMP_INTERNAL( _ctx, "false" );
         }break;
     case js_type_true:
         {
-            __JS_DUMP_INTERNAL( _data, "true" );
+            JS_DUMP_INTERNAL( _ctx, "true" );
         }break;
     case js_type_integer:
         {
@@ -2032,10 +2181,7 @@ static void __js_dump_element( const js_element_t * _element, __js_dump_data_t *
 
             js_integer_value_t value = integer->value;
 
-            const js_dump_buffer_t * buffer = _data->buffer;
-            const js_dump_write_t * write = _data->write;
-
-            (*write->integer)(value, buffer, write->ud);
+            __js_dump_integer( _ctx, value );
         }break;
     case js_type_real:
         {
@@ -2043,87 +2189,80 @@ static void __js_dump_element( const js_element_t * _element, __js_dump_data_t *
 
             js_real_value_t value = real->value;
 
-            const js_dump_buffer_t * buffer = _data->buffer;
-            const js_dump_write_t * write = _data->write;
-
-            (*write->real)(value, buffer, write->ud);
+            __js_dump_double( _ctx, value, 6 );
         }break;
     case js_type_string:
         {
             js_string_t * string = (js_string_t *)_element;
 
-            __js_dump_char( _data, '"' );
-            __js_dump_string( _data, string->value, string->size );
-            __js_dump_char( _data, '"' );
+            __js_dump_char( _ctx, '"' );
+            __js_dump_string( _ctx, string->value, string->size );
+            __js_dump_char( _ctx, '"' );
         }break;
     case js_type_array:
         {
             js_array_t * array = (js_array_t *)_element;
 
-            __js_dump_array( _data, _element );
+            __js_dump_array( _ctx, _element );
         }break;
     case js_type_object:
         {
             js_object_t * object = (js_object_t *)_element;
 
-            __js_dump_object( _data, _element );
+            __js_dump_object( _ctx, _element );
         }break;
     }
 }
 //////////////////////////////////////////////////////////////////////////
 static void __js_dump_array_element( js_size_t _index, const js_element_t * _value, void * _ud )
 {
-    __js_dump_data_t * data = (__js_dump_data_t *)_ud;
+    js_dump_ctx_t * ctx = (js_dump_ctx_t *)_ud;
 
     if( _index != 0 )
     {
-        __js_dump_char( data, ',' );
+        __js_dump_char( ctx, ',' );
     }
 
-    __js_dump_element( _value, data );
+    __js_dump_element( ctx, _value );
 }
 //////////////////////////////////////////////////////////////////////////
-static void __js_dump_array( __js_dump_data_t * _data, const js_element_t * _element )
+static void __js_dump_array( js_dump_ctx_t * _ctx, const js_element_t * _element )
 {
-    __js_dump_char( _data, '[' );
-    js_array_foreach( _element, &__js_dump_array_element, _data );
-    __js_dump_char( _data, ']' );
+    __js_dump_char( _ctx, '[' );
+    js_array_foreach( _element, &__js_dump_array_element, _ctx );
+    __js_dump_char( _ctx, ']' );
 }
 //////////////////////////////////////////////////////////////////////////
 static void __js_dump_object_element( js_size_t _index, const char * _key, size_t _size, const js_element_t * _value, void * _ud )
 {
-    __js_dump_data_t * data = (__js_dump_data_t *)_ud;
+    js_dump_ctx_t * ctx = (js_dump_ctx_t *)_ud;
 
     if( _index != 0 )
     {
-        __js_dump_char( data, ',' );
+        __js_dump_char( ctx, ',' );
     }
 
-    __js_dump_char( data, '"' );
-    __js_dump_string( data, _key, _size );
-    __js_dump_char( data, '"' );
+    __js_dump_char( ctx, '"' );
+    __js_dump_string( ctx, _key, _size );
+    __js_dump_char( ctx, '"' );
 
-    __js_dump_char( data, ':' );
+    __js_dump_char( ctx, ':' );
 
-    __js_dump_element( _value, data );
+    __js_dump_element( ctx, _value );
 }
 //////////////////////////////////////////////////////////////////////////
-static void __js_dump_object( __js_dump_data_t * _data, const js_element_t * _element )
+static void __js_dump_object( js_dump_ctx_t * _ctx, const js_element_t * _element )
 {
-    __js_dump_char( _data, '{' );
-    js_object_foreach( _element, &__js_dump_object_element, _data );
-    __js_dump_char( _data, '}' );
+    __js_dump_char( _ctx, '{' );
+    js_object_foreach( _element, &__js_dump_object_element, _ctx );
+    __js_dump_char( _ctx, '}' );
 }
 //////////////////////////////////////////////////////////////////////////
-js_result_t js_dump( const js_element_t * _element, const js_dump_buffer_t * _buffer, const js_dump_write_t * _write )
+js_result_t js_dump( const js_element_t * _element, js_dump_ctx_t * _ctx )
 {
-    __js_dump_data_t data;
-    data.buffer = _buffer;
-    data.write = _write;
+    __js_dump_object( _ctx, _element );
 
-    __js_dump_object( &data, _element );
-
-    char * dst = _buffer->buffer( 1, _buffer->ud );
+    char * dst = _ctx->buffer( 1, _ctx->ud );
 
     if( dst == JS_NULLPTR )
     {
