@@ -8,12 +8,12 @@
 //////////////////////////////////////////////////////////////////////////
 typedef struct js_stats_t
 {
-    size_t memory_allocated_size;
-    size_t memory_allocated_count;
-    size_t memory_allocated_peak;
+    js_size_t memory_allocated_size;
+    js_size_t memory_allocated_count;
+    js_size_t memory_allocated_peak;
 } js_stats_t;
 //////////////////////////////////////////////////////////////////////////
-static void * __alloc( size_t size, void * ud )
+static void * __alloc( js_size_t size, void * ud )
 {
     js_stats_t * stats = (js_stats_t *)ud;
 
@@ -28,7 +28,7 @@ static void * __alloc( size_t size, void * ud )
     return p;
 }
 //////////////////////////////////////////////////////////////////////////
-static void __free( void * ptr, void * ud )
+static void __free( js_size_t * ptr, void * ud )
 {
     js_stats_t * stats = (js_stats_t *)ud;
 
@@ -53,10 +53,10 @@ typedef struct js_print_ctx_t
     int tab;
 } js_print_ctx_t;
 //////////////////////////////////////////////////////////////////////////
-static void __js_array_print( size_t _index, const js_element_t * _element, void * _ud );
-static void __js_object_print( size_t _index, const char * _key, size_t _size, const js_element_t * _element, void * _ud );
+static void __js_array_print( js_size_t _index, const js_element_t * _element, void * _ud );
+static void __js_object_print( js_size_t _index, const char * _key, js_size_t _size, const js_element_t * _element, void * _ud );
 //////////////////////////////////////////////////////////////////////////
-static void __js_array_print( size_t _index, const js_element_t * _element, void * _ud )
+static void __js_array_print( js_size_t _index, const js_element_t * _element, void * _ud )
 {
     js_print_ctx_t * ctx = (js_print_ctx_t *)_ud;
 
@@ -73,11 +73,13 @@ static void __js_array_print( size_t _index, const js_element_t * _element, void
         {
             printf( "null" );
         }break;
-    case js_type_boolean:
+    case js_type_false:
         {
-            js_bool_t b = js_get_boolean( _element );
-
-            printf( "%s", b ? "true" : "false" );
+            printf( "false" );
+        }break;
+    case js_type_true:
+        {
+            printf( "true" );
         }break;
     case js_type_integer:
         {
@@ -126,7 +128,7 @@ static void __js_array_print( size_t _index, const js_element_t * _element, void
     }
 }
 //////////////////////////////////////////////////////////////////////////
-static void __js_object_print( size_t _index, const char * _key, size_t _size, const js_element_t * _element, void * _ud )
+static void __js_object_print( size_t _index, const char * _key, js_size_t _size, const js_element_t * _element, void * _ud )
 {
     js_print_ctx_t * ctx = (js_print_ctx_t *)_ud;
 
@@ -145,11 +147,13 @@ static void __js_object_print( size_t _index, const char * _key, size_t _size, c
         {
             printf( "null" );
         }break;
-    case js_type_boolean:
+    case js_type_false:
         {
-            js_bool_t b = js_get_boolean( _element );
-
-            printf( "%s", b ? "true" : "false" );
+            printf( "false" );
+        }break;
+    case js_type_true:
+        {
+            printf( "true" );
         }break;
     case js_type_integer:
         {

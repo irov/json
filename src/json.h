@@ -46,12 +46,13 @@ typedef double js_real_value_t;
 typedef enum js_type_e
 {
     js_type_null = 0,
-    js_type_boolean = 1 << 1,
-    js_type_integer = 1 << 2,
-    js_type_real = 1 << 3,
-    js_type_string = 1 << 4,
-    js_type_array = 1 << 5,
-    js_type_object = 1 << 6,
+    js_type_true = 1 << 1,
+    js_type_false = 1 << 2,
+    js_type_integer = 1 << 3,
+    js_type_real = 1 << 4,
+    js_type_string = 1 << 5,
+    js_type_array = 1 << 6,
+    js_type_object = 1 << 7,
 } js_type_e;
 
 typedef enum js_flags_e
@@ -94,6 +95,8 @@ void js_free( js_element_t * _element );
 js_type_e js_type( const js_element_t * _element );
 
 js_bool_t js_is_null( const js_element_t * _element );
+js_bool_t js_is_false( const js_element_t * _element );
+js_bool_t js_is_true( const js_element_t * _element );
 js_bool_t js_is_boolean( const js_element_t * _element );
 js_bool_t js_is_integer( const js_element_t * _element );
 js_bool_t js_is_real( const js_element_t * _element );
@@ -113,10 +116,30 @@ js_size_t js_object_size( const js_element_t * _element );
 const js_element_t * js_object_get( const js_element_t * _element, const char * _key );
 const js_element_t * js_object_getn( const js_element_t * _element, const char * _key, js_size_t _size );
 
-typedef void (*js_object_foreach_t)(size_t _index, const char * _key, size_t _size, const js_element_t * _value, void * _ud);
-void js_object_foreach( const js_element_t * _element, js_object_foreach_t _foreach, void * _ud );
+typedef void (*js_object_foreach_fun_t)(js_size_t _index, const char * _key, js_size_t _size, const js_element_t * _value, void * _ud);
+void js_object_foreach( const js_element_t * _element, js_object_foreach_fun_t _foreach, void * _ud );
 
-typedef void (*js_array_foreach_t)(size_t _index, const js_element_t * _value, void * _ud);
-void js_array_foreach( const js_element_t * _element, js_array_foreach_t _foreach, void * _ud );
+typedef void (*js_array_foreach_fun_t)(js_size_t _index, const js_element_t * _value, void * _ud);
+void js_array_foreach( const js_element_t * _element, js_array_foreach_fun_t _foreach, void * _ud );
+
+typedef char * (*js_dump_buffer_fun_t)(js_size_t _size, void * _ud);
+
+typedef struct js_dump_buffer_t
+{
+    js_dump_buffer_fun_t buffer;
+    void * ud;
+} js_dump_buffer_t;
+
+typedef void(*js_dump_integer_fun_t)(js_integer_value_t _value, const js_dump_buffer_t * _buffer, void * _ud);
+typedef void(*js_dump_real_fun_t)(js_real_value_t _value, const js_dump_buffer_t * _buffer, void * _ud);
+
+typedef struct js_dump_write_t
+{    
+    js_dump_integer_fun_t integer;
+    js_dump_real_fun_t real;
+    void * ud;
+} js_dump_write_t;
+
+js_result_t js_dump( const js_element_t * _element, const js_dump_buffer_t * _buffer, const js_dump_write_t * _write );
 
 #endif

@@ -30,11 +30,15 @@ typedef struct js_null_t
     js_element_t base;
 } js_null_t;
 //////////////////////////////////////////////////////////////////////////
-typedef struct js_boolean_t
+typedef struct js_false_t
 {
     js_element_t base;
-    js_bool_t value;
-} js_boolean_t;
+} js_false_t;
+//////////////////////////////////////////////////////////////////////////
+typedef struct js_true_t
+{
+    js_element_t base;
+} js_true_t;
 //////////////////////////////////////////////////////////////////////////
 typedef struct js_integer_t
 {
@@ -124,15 +128,26 @@ static js_null_t * __js_null_create( js_allocator_t * _allocator )
     return null;
 }
 //////////////////////////////////////////////////////////////////////////
-static js_boolean_t * __js_boolean_create( js_allocator_t * _allocator, js_bool_t _value )
+static js_false_t * __js_false_create( js_allocator_t * _allocator )
 {
     JS_UNUSED( _allocator );
 
-    static js_boolean_t cache_booleans[2] = {{js_type_boolean, JS_FALSE}, {js_type_boolean, JS_TRUE}};
+    static js_false_t cache_false = {js_type_false};
 
-    js_boolean_t * boolean = cache_booleans + _value;
+    js_false_t * f = &cache_false;
 
-    return boolean;
+    return f;
+}
+//////////////////////////////////////////////////////////////////////////
+static js_true_t * __js_true_create( js_allocator_t * _allocator )
+{
+    JS_UNUSED( _allocator );
+
+    static js_true_t cache_true = {js_type_true};
+
+    js_true_t * t = &cache_true;
+
+    return t;
 }
 //////////////////////////////////////////////////////////////////////////
 static js_integer_t * __js_integer_create( js_allocator_t * _allocator, js_integer_value_t _value )
@@ -391,7 +406,8 @@ static void __js_element_destroy( js_document_t * _document, js_element_t * _ele
     switch( type )
     {
     case js_type_null:
-    case js_type_boolean:
+    case js_type_false:
+    case js_type_true:
         {
             // cache
         }break;
@@ -539,7 +555,7 @@ static js_document_t * __js_document_create( js_allocator_t _allocator, js_flags
     }
     else
     {
-        document->string_create = *__js_string_create_allocator;
+        document->string_create = &__js_string_create_allocator;
         document->string_destroy = &__js_string_destroy_allocator;
     }
 
@@ -1062,9 +1078,9 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
     {
         if( __js_strstr( data_begin, data_soa, "true" ) != JS_NULLPTR )
         {
-            js_boolean_t * boolean = __js_boolean_create( allocator, JS_TRUE );
+            js_true_t * t = __js_true_create( allocator );
 
-            *_element = (js_element_t *)boolean;
+            *_element = (js_element_t *)t;
 
             *_data = data_begin + 4;
 
@@ -1072,9 +1088,9 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
         }
         else if( __js_strstr( data_begin, data_soa, "false" ) != JS_NULLPTR )
         {
-            js_boolean_t * boolean = __js_boolean_create( allocator, JS_FALSE );
+            js_false_t * f = __js_false_create( allocator );
 
-            *_element = (js_element_t *)boolean;
+            *_element = (js_element_t *)f;
 
             *_data = data_begin + 5;
 
@@ -1333,7 +1349,7 @@ static js_result_t __js_parse_object( js_document_t * _document, const char ** _
     return JS_SUCCESSFUL;
 }
 //////////////////////////////////////////////////////////////////////////
-static void * __js_buffer_alloc( size_t _size, void * _ud )
+static void * __js_buffer_alloc( js_size_t _size, void * _ud )
 {
     js_buffer_t * buffer = (js_buffer_t *)_ud;
 
@@ -1428,15 +1444,21 @@ static js_result_t __js_clone_element( js_document_t * _document, const js_eleme
 
             *_clone = (js_element_t *)null;
         }break;
-    case js_type_boolean:
+    case js_type_false:
         {
-            js_boolean_t * boolean = (js_boolean_t *)_element;
+            js_false_t * false_clone = __js_false_create( allocator );
 
-            js_boolean_t * boolean_clone = __js_boolean_create( allocator, boolean->value );
+            JS_ALLOCATOR_MEMORY_CHECK( false_clone, JS_FAILURE );
 
-            JS_ALLOCATOR_MEMORY_CHECK( boolean_clone, JS_FAILURE );
+            *_clone = (js_element_t *)false_clone;
+        }break;
+    case js_type_true:
+        {
+            js_true_t * true_clone = __js_true_create( allocator );
 
-            *_clone = (js_element_t *)boolean_clone;
+            JS_ALLOCATOR_MEMORY_CHECK( true_clone, JS_FAILURE );
+
+            *_clone = (js_element_t *)true_clone;
         }break;
     case js_type_integer:
         {
@@ -1729,48 +1751,59 @@ js_type_e js_type( const js_element_t * _element )
     return type;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_is_null( const js_element_t * _object )
+js_bool_t js_is_null( const js_element_t * _element )
 {
-    return _object->type == js_type_null;
+    return _element->type == js_type_null;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_is_boolean( const js_element_t * _object )
+js_bool_t js_is_false( const js_element_t * _element )
 {
-    return _object->type == js_type_boolean;
+    return _element->type == js_type_false;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_is_integer( const js_element_t * _object )
+js_bool_t js_is_true( const js_element_t * _element )
 {
-    return _object->type == js_type_integer;
+    return _element->type == js_type_true;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_is_real( const js_element_t * _object )
+js_bool_t js_is_boolean( const js_element_t * _element )
 {
-    return _object->type == js_type_real;
+    return _element->type == js_type_false || _element->type == js_type_true;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_is_string( const js_element_t * _object )
+js_bool_t js_is_integer( const js_element_t * _element )
 {
-    return _object->type == js_type_string;
+    return _element->type == js_type_integer;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_is_array( const js_element_t * _object )
+js_bool_t js_is_real( const js_element_t * _element )
 {
-    return _object->type == js_type_array;
+    return _element->type == js_type_real;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_is_object( const js_element_t * _object )
+js_bool_t js_is_string( const js_element_t * _element )
 {
-    return _object->type == js_type_object;
+    return _element->type == js_type_string;
+}
+//////////////////////////////////////////////////////////////////////////
+js_bool_t js_is_array( const js_element_t * _element )
+{
+    return _element->type == js_type_array;
+}
+//////////////////////////////////////////////////////////////////////////
+js_bool_t js_is_object( const js_element_t * _element )
+{
+    return _element->type == js_type_object;
 }
 //////////////////////////////////////////////////////////////////////////
 js_bool_t js_get_boolean( const js_element_t * _element )
 {
-    js_boolean_t * el = (js_boolean_t *)_element;
+    if( _element->type == js_type_true )
+    {
+        return JS_TRUE;
+    }
 
-    js_bool_t value = el->value;
-
-    return value;
+    return JS_FALSE;
 }
 //////////////////////////////////////////////////////////////////////////
 js_integer_value_t js_get_integer( const js_element_t * _element )
@@ -1887,14 +1920,14 @@ const js_element_t * js_object_getn( const js_element_t * _object, const char * 
     return JS_NULLPTR;
 }
 //////////////////////////////////////////////////////////////////////////
-void js_object_foreach( const js_element_t * _element, js_object_foreach_t _foreach, void * _ud )
+void js_object_foreach( const js_element_t * _element, js_object_foreach_fun_t _foreach, void * _ud )
 {
     const js_object_t * object = (const js_object_t *)_element;
 
     const js_node_t * it_key = object->keys;
     const js_node_t * it_value = object->values;
 
-    size_t index = 0;
+    js_size_t index = 0;
 
     for( ; it_key != JS_NULLPTR; it_key = it_key->next, it_value = it_value->next )
     {
@@ -1910,13 +1943,13 @@ void js_object_foreach( const js_element_t * _element, js_object_foreach_t _fore
     }
 }
 //////////////////////////////////////////////////////////////////////////
-void js_array_foreach( const js_element_t * _element, js_array_foreach_t _foreach, void * _ud )
+void js_array_foreach( const js_element_t * _element, js_array_foreach_fun_t _foreach, void * _ud )
 {
     const js_array_t * array = (const js_array_t *)_element;
 
     const js_node_t * it_value = array->values;
 
-    size_t index = 0;
+    js_size_t index = 0;
 
     for( ; it_value != JS_NULLPTR; it_value = it_value->next )
     {
@@ -1926,5 +1959,179 @@ void js_array_foreach( const js_element_t * _element, js_array_foreach_t _foreac
 
         ++index;
     }
+}
+//////////////////////////////////////////////////////////////////////////
+typedef struct __js_dump_data_t
+{    
+    const js_dump_buffer_t * buffer;
+    const js_dump_write_t * write;
+} __js_dump_data_t;
+//////////////////////////////////////////////////////////////////////////
+static void __js_memcpy( char * _dst, const char * _src, js_size_t _size )
+{
+    while( _size-- )
+    {
+        *_dst++ = *_src++;
+    }
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_char( __js_dump_data_t * _data, char _value )
+{
+    const js_dump_buffer_t * buffer = _data->buffer;
+
+    char * dst = (*buffer->buffer)(1, buffer->ud);
+
+    if( dst == JS_NULLPTR )
+    {
+        return;
+    }
+
+    *(dst) = _value;
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_string( __js_dump_data_t * _data, const char * _value, js_size_t _size )
+{
+    const js_dump_buffer_t * buffer = _data->buffer;
+
+    char * dst = (*buffer->buffer)(_size, buffer->ud);
+
+    if( dst == JS_NULLPTR )
+    {
+        return;
+    }
+
+    __js_memcpy( dst, _value, _size );
+}
+//////////////////////////////////////////////////////////////////////////
+#define __JS_DUMP_INTERNAL(data, value) __js_dump_string(data, value, sizeof(value))
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_array( __js_dump_data_t * _data, const js_element_t * _element );
+static void __js_dump_object( __js_dump_data_t * _data, const js_element_t * _element );
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_element( const js_element_t * _element, __js_dump_data_t * _data )
+{ 
+    js_type_e type = js_type( _element );
+
+    switch( type )
+    {
+    case js_type_null:
+        {
+            __JS_DUMP_INTERNAL( _data, "null" );
+        }break;
+    case js_type_false:
+        {
+            __JS_DUMP_INTERNAL( _data, "false" );
+        }break;
+    case js_type_true:
+        {
+            __JS_DUMP_INTERNAL( _data, "true" );
+        }break;
+    case js_type_integer:
+        {
+            js_integer_t * integer = (js_integer_t *)_element;
+
+            js_integer_value_t value = integer->value;
+
+            const js_dump_buffer_t * buffer = _data->buffer;
+            const js_dump_write_t * write = _data->write;
+
+            (*write->integer)(value, buffer, write->ud);
+        }break;
+    case js_type_real:
+        {
+            js_real_t * real = (js_real_t *)_element;
+
+            js_real_value_t value = real->value;
+
+            const js_dump_buffer_t * buffer = _data->buffer;
+            const js_dump_write_t * write = _data->write;
+
+            (*write->real)(value, buffer, write->ud);
+        }break;
+    case js_type_string:
+        {
+            js_string_t * string = (js_string_t *)_element;
+
+            __js_dump_char( _data, '"' );
+            __js_dump_string( _data, string->value, string->size );
+            __js_dump_char( _data, '"' );
+        }break;
+    case js_type_array:
+        {
+            js_array_t * array = (js_array_t *)_element;
+
+            __js_dump_array( _data, _element );
+        }break;
+    case js_type_object:
+        {
+            js_object_t * object = (js_object_t *)_element;
+
+            __js_dump_object( _data, _element );
+        }break;
+    }
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_array_element( js_size_t _index, const js_element_t * _value, void * _ud )
+{
+    __js_dump_data_t * data = (__js_dump_data_t *)_ud;
+
+    if( _index != 0 )
+    {
+        __js_dump_char( data, ',' );
+    }
+
+    __js_dump_element( _value, data );
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_array( __js_dump_data_t * _data, const js_element_t * _element )
+{
+    __js_dump_char( _data, '[' );
+    js_array_foreach( _element, &__js_dump_array_element, _data );
+    __js_dump_char( _data, ']' );
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_object_element( js_size_t _index, const char * _key, size_t _size, const js_element_t * _value, void * _ud )
+{
+    __js_dump_data_t * data = (__js_dump_data_t *)_ud;
+
+    if( _index != 0 )
+    {
+        __js_dump_char( data, ',' );
+    }
+
+    __js_dump_char( data, '"' );
+    __js_dump_string( data, _key, _size );
+    __js_dump_char( data, '"' );
+
+    __js_dump_char( data, ':' );
+
+    __js_dump_element( _value, data );
+}
+//////////////////////////////////////////////////////////////////////////
+static void __js_dump_object( __js_dump_data_t * _data, const js_element_t * _element )
+{
+    __js_dump_char( _data, '{' );
+    js_object_foreach( _element, &__js_dump_object_element, _data );
+    __js_dump_char( _data, '}' );
+}
+//////////////////////////////////////////////////////////////////////////
+js_result_t js_dump( const js_element_t * _element, const js_dump_buffer_t * _buffer, const js_dump_write_t * _write )
+{
+    __js_dump_data_t data;
+    data.buffer = _buffer;
+    data.write = _write;
+
+    __js_dump_object( &data, _element );
+
+    char * dst = _buffer->buffer( 1, _buffer->ud );
+
+    if( dst == JS_NULLPTR )
+    {
+        return JS_FAILURE;
+    }
+
+    *dst = '\0';
+
+    return JS_SUCCESSFUL;
 }
 //////////////////////////////////////////////////////////////////////////
