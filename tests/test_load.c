@@ -48,24 +48,6 @@ static void __failed( const char * _data, const char * _end, const char * _messa
     printf( "failed: %s\n", _message );
 }
 //////////////////////////////////////////////////////////////////////////
-static char * __js_dump_buffer( js_size_t _size, void * _ud )
-{
-    js_buffer_t * buffer = (js_buffer_t *)_ud;
-
-    if( buffer->memory + _size > buffer->end )
-    {
-        buffer->memory = buffer->end;
-
-        return JS_NULLPTR;
-    }
-
-    uint8_t * new_buffer = buffer->memory;
-
-    buffer->memory += _size;
-    
-    return (char *)new_buffer;
-}
-//////////////////////////////////////////////////////////////////////////
 static void __js_print( const js_element_t * _element )
 {
     char dump_memory[2048];
@@ -74,8 +56,7 @@ static void __js_print( const js_element_t * _element )
     js_make_buffer( dump_memory, sizeof( dump_memory ), &dump_buff );
 
     js_dump_ctx_t dump_ctx;
-    dump_ctx.buffer = &__js_dump_buffer;
-    dump_ctx.ud = &dump_buff;
+    js_make_dump_ctx_buffer( &dump_buff, &dump_ctx );
 
     js_dump( _element, &dump_ctx );
 

@@ -1373,8 +1373,36 @@ static void __js_buffer_free( void * _ptr, void * _ud )
 //////////////////////////////////////////////////////////////////////////
 void js_make_buffer( void * _memory, js_size_t _capacity, js_buffer_t * const _buffer )
 {
-    _buffer->memory = (uint8_t *)_memory;
+    _buffer->begin = (uint8_t *)_memory;    
     _buffer->end = (uint8_t *)_memory + _capacity;
+
+    _buffer->memory = _buffer->begin;
+}
+//////////////////////////////////////////////////////////////////////////
+js_size_t js_get_buffer_size( const js_buffer_t * _buffer )
+{
+    js_size_t size = _buffer->memory - _buffer->begin;
+
+    return size;
+}
+//////////////////////////////////////////////////////////////////////////
+js_size_t js_get_buffer_capacity( const js_buffer_t * _buffer )
+{
+    js_size_t capacity = _buffer->end - _buffer->begin;
+
+    return capacity;
+}
+//////////////////////////////////////////////////////////////////////////
+js_size_t js_get_buffer_available( const js_buffer_t * _buffer )
+{
+    js_size_t available = _buffer->end - _buffer->memory;
+
+    return available;
+}
+//////////////////////////////////////////////////////////////////////////
+void js_rewind_buffer( js_buffer_t * _buffer )
+{
+    _buffer->memory = _buffer->begin;
 }
 //////////////////////////////////////////////////////////////////////////
 void js_make_allocator_buffer( js_buffer_t * _buffer, js_allocator_t * const _allocator )
@@ -1918,6 +1946,75 @@ const js_element_t * js_object_getn( const js_element_t * _object, const char * 
     return JS_NULLPTR;
 }
 //////////////////////////////////////////////////////////////////////////
+js_result_t js_array_visit( const js_element_t * _element, js_array_visitor_fun_t _visitor, void * _ud )
+{
+    const js_array_t * array = (const js_array_t *)_element;
+
+    const js_node_t * it_value = array->values;
+
+    js_size_t index = 0;
+
+    for( ; it_value != JS_NULLPTR; it_value = it_value->next )
+    {
+        const js_element_t * value = it_value->element;
+
+        if( (*_visitor)(index, value, _ud) == JS_FAILURE )
+        {
+            return JS_FAILURE;
+        }
+
+        ++index;
+    }
+
+    return JS_SUCCESSFUL;
+}
+//////////////////////////////////////////////////////////////////////////
+js_result_t js_object_visit( const js_element_t * _element, js_object_visitor_fun_t _visitor, void * _ud )
+{
+    const js_object_t * object = (const js_object_t *)_element;
+
+    const js_node_t * it_key = object->keys;
+    const js_node_t * it_value = object->values;
+
+    js_size_t index = 0;
+
+    for( ; it_key != JS_NULLPTR; it_key = it_key->next, it_value = it_value->next )
+    {
+        const js_string_t * key = (const js_string_t *)it_key->element;
+        const js_element_t * value = it_value->element;
+
+        const char * key_value = key->value;
+        js_size_t key_size = key->size;
+
+        if( (*_visitor)(index, key_value, key_size, value, _ud) == JS_FAILURE )
+        {
+            return JS_FAILURE;
+        }
+
+        ++index;
+    }
+
+    return JS_SUCCESSFUL;
+}
+//////////////////////////////////////////////////////////////////////////
+void js_array_foreach( const js_element_t * _element, js_array_foreach_fun_t _foreach, void * _ud )
+{
+    const js_array_t * array = (const js_array_t *)_element;
+
+    const js_node_t * it_value = array->values;
+
+    js_size_t index = 0;
+
+    for( ; it_value != JS_NULLPTR; it_value = it_value->next )
+    {
+        const js_element_t * value = it_value->element;
+
+        (*_foreach)(index, value, _ud);
+
+        ++index;
+    }
+}
+//////////////////////////////////////////////////////////////////////////
 void js_object_foreach( const js_element_t * _element, js_object_foreach_fun_t _foreach, void * _ud )
 {
     const js_object_t * object = (const js_object_t *)_element;
@@ -1935,25 +2032,7 @@ void js_object_foreach( const js_element_t * _element, js_object_foreach_fun_t _
         const char * key_value = key->value;
         js_size_t key_size = key->size;
 
-        _foreach( index, key_value, key_size, value, _ud );
-
-        ++index;
-    }
-}
-//////////////////////////////////////////////////////////////////////////
-void js_array_foreach( const js_element_t * _element, js_array_foreach_fun_t _foreach, void * _ud )
-{
-    const js_array_t * array = (const js_array_t *)_element;
-
-    const js_node_t * it_value = array->values;
-
-    js_size_t index = 0;
-
-    for( ; it_value != JS_NULLPTR; it_value = it_value->next )
-    {
-        const js_element_t * value = it_value->element;
-
-        _foreach( index, value, _ud );
+        (*_foreach)(index, key_value, key_size, value, _ud);
 
         ++index;
     }
@@ -2256,6 +2335,30 @@ static void __js_dump_object( js_dump_ctx_t * _ctx, const js_element_t * _elemen
     __js_dump_char( _ctx, '{' );
     js_object_foreach( _element, &__js_dump_object_element, _ctx );
     __js_dump_char( _ctx, '}' );
+}
+//////////////////////////////////////////////////////////////////////////
+static char * __js_dump_buffer( js_size_t _size, void * _ud )
+{
+    js_buffer_t * buffer = (js_buffer_t *)_ud;
+
+    if( buffer->memory + _size > buffer->end )
+    {
+        buffer->memory = buffer->end;
+
+        return JS_NULLPTR;
+    }
+
+    uint8_t * new_buffer = buffer->memory;
+
+    buffer->memory += _size;
+
+    return (char *)new_buffer;
+}
+//////////////////////////////////////////////////////////////////////////
+void js_make_dump_ctx_buffer( js_buffer_t * _buffer, js_dump_ctx_t * const _ctx )
+{
+    _ctx->buffer = &__js_dump_buffer;
+    _ctx->ud = _buffer;
 }
 //////////////////////////////////////////////////////////////////////////
 js_result_t js_dump( const js_element_t * _element, js_dump_ctx_t * _ctx )

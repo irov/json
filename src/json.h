@@ -46,8 +46,8 @@ typedef double js_real_value_t;
 typedef enum js_type_e
 {
     js_type_null = 0,
-    js_type_true = 1 << 1,
-    js_type_false = 1 << 2,
+    js_type_false = 1 << 1,
+    js_type_true = 1 << 2,
     js_type_integer = 1 << 3,
     js_type_real = 1 << 4,
     js_type_string = 1 << 5,
@@ -76,11 +76,17 @@ typedef struct js_allocator_t
 
 typedef struct js_buffer_t
 {
-    uint8_t * memory;
+    uint8_t * begin;
     uint8_t * end;
+    uint8_t * memory;    
 } js_buffer_t;
 
 void js_make_buffer( void * _memory, js_size_t _capacity, js_buffer_t * const _buffer );
+js_size_t js_get_buffer_size( const js_buffer_t * _buffer );
+js_size_t js_get_buffer_capacity( const js_buffer_t * _buffer );
+js_size_t js_get_buffer_available( const js_buffer_t * _buffer );
+void js_rewind_buffer( js_buffer_t * _buffer );
+
 void js_make_allocator_buffer( js_buffer_t * _buffer, js_allocator_t * const _allocator );
 void js_make_allocator_default( js_alloc_fun_t _alloc, js_free_fun_t _free, void * ud, js_allocator_t * const _allocator );
 
@@ -116,11 +122,17 @@ js_size_t js_object_size( const js_element_t * _element );
 const js_element_t * js_object_get( const js_element_t * _element, const char * _key );
 const js_element_t * js_object_getn( const js_element_t * _element, const char * _key, js_size_t _size );
 
-typedef void (*js_object_foreach_fun_t)(js_size_t _index, const char * _key, js_size_t _size, const js_element_t * _value, void * _ud);
-void js_object_foreach( const js_element_t * _element, js_object_foreach_fun_t _foreach, void * _ud );
+typedef js_result_t( *js_array_visitor_fun_t )(js_size_t _index, const js_element_t * _value, void * _ud);
+js_result_t js_array_visit( const js_element_t * _element, js_array_visitor_fun_t _visitor, void * _ud );
 
-typedef void (*js_array_foreach_fun_t)(js_size_t _index, const js_element_t * _value, void * _ud);
+typedef js_result_t( *js_object_visitor_fun_t )(js_size_t _index, const char * _key, js_size_t _size, const js_element_t * _value, void * _ud);
+js_result_t js_object_visit( const js_element_t * _element, js_object_visitor_fun_t _visitor, void * _ud );
+
+typedef void(*js_array_foreach_fun_t)(js_size_t _index, const js_element_t * _value, void * _ud);
 void js_array_foreach( const js_element_t * _element, js_array_foreach_fun_t _foreach, void * _ud );
+
+typedef void(*js_object_foreach_fun_t)(js_size_t _index, const char * _key, js_size_t _size, const js_element_t * _value, void * _ud);
+void js_object_foreach( const js_element_t * _element, js_object_foreach_fun_t _foreach, void * _ud );
 
 typedef char * (*js_dump_buffer_fun_t)(js_size_t _size, void * _ud);
 
@@ -129,6 +141,8 @@ typedef struct js_dump_ctx_t
     js_dump_buffer_fun_t buffer;
     void * ud;
 } js_dump_ctx_t;
+
+void js_make_dump_ctx_buffer( js_buffer_t * _buffer, js_dump_ctx_t * const _ctx );
 
 js_result_t js_dump( const js_element_t * _element, js_dump_ctx_t * _ctx );
 
