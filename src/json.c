@@ -1980,13 +1980,10 @@ js_result_t js_object_visit( const js_element_t * _element, js_object_visitor_fu
 
     for( ; it_key != JS_NULLPTR; it_key = it_key->next, it_value = it_value->next )
     {
-        const js_string_t * key = (const js_string_t *)it_key->element;
+        const js_element_t * key = it_key->element;
         const js_element_t * value = it_value->element;
 
-        const char * key_value = key->value;
-        js_size_t key_size = key->size;
-
-        if( (*_visitor)(index, key_value, key_size, value, _ud) == JS_FAILURE )
+        if( (*_visitor)(index, key, value, _ud) == JS_FAILURE )
         {
             return JS_FAILURE;
         }
@@ -2026,13 +2023,10 @@ void js_object_foreach( const js_element_t * _element, js_object_foreach_fun_t _
 
     for( ; it_key != JS_NULLPTR; it_key = it_key->next, it_value = it_value->next )
     {
-        const js_string_t * key = (const js_string_t * )it_key->element;
+        const js_element_t * key = it_key->element;
         const js_element_t * value = it_value->element;
 
-        const char * key_value = key->value;
-        js_size_t key_size = key->size;
-
-        (*_foreach)(index, key_value, key_size, value, _ud);
+        (*_foreach)(index, key, value, _ud);
 
         ++index;
     }

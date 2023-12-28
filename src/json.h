@@ -125,13 +125,13 @@ const js_element_t * js_object_getn( const js_element_t * _element, const char *
 typedef js_result_t( *js_array_visitor_fun_t )(js_size_t _index, const js_element_t * _value, void * _ud);
 js_result_t js_array_visit( const js_element_t * _element, js_array_visitor_fun_t _visitor, void * _ud );
 
-typedef js_result_t( *js_object_visitor_fun_t )(js_size_t _index, const char * _key, js_size_t _size, const js_element_t * _value, void * _ud);
+typedef js_result_t( *js_object_visitor_fun_t )(js_size_t _index, const js_element_t * _key, const js_element_t * _value, void * _ud);
 js_result_t js_object_visit( const js_element_t * _element, js_object_visitor_fun_t _visitor, void * _ud );
 
 typedef void(*js_array_foreach_fun_t)(js_size_t _index, const js_element_t * _value, void * _ud);
 void js_array_foreach( const js_element_t * _element, js_array_foreach_fun_t _foreach, void * _ud );
 
-typedef void(*js_object_foreach_fun_t)(js_size_t _index, const char * _key, js_size_t _size, const js_element_t * _value, void * _ud);
+typedef void(*js_object_foreach_fun_t)(js_size_t _index, const js_element_t * _key, const js_element_t * _value, void * _ud);
 void js_object_foreach( const js_element_t * _element, js_object_foreach_fun_t _foreach, void * _ud );
 
 typedef char * (*js_dump_buffer_fun_t)(js_size_t _size, void * _ud);
