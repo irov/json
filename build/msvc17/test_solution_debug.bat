@@ -1,3 +1,3 @@
-call test_solution.bat Debug
+@call %~dp0test_solution.bat Debug
 
 @pause

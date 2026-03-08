@@ -1,3 +1,3 @@
-call make_solution.bat Release
+@call %~dp0make_solution.bat Release
 
 @pause

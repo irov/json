@@ -662,6 +662,47 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
 static js_result_t __js_parse_array( js_document_t * _document, const char ** _data, const char * _end, js_failed_fun_t _failed, void * _ud, js_element_t * _array );
 static js_result_t __js_parse_object( js_document_t * _document, const char ** _data, const char * _end, js_failed_fun_t _failed, void * _ud, js_element_t * _object );
 //////////////////////////////////////////////////////////////////////////
+static void __js_parse_failed( js_failed_fun_t _failed, const char * _pointer, const char * _end, const char * _message, void * _ud )
+{
+    if( _failed == JS_NULLPTR )
+    {
+        return;
+    }
+
+    _failed( _pointer, _end, _message, _ud );
+}
+//////////////////////////////////////////////////////////////////////////
+static const char * __js_parse_string_end( const char * _begin, const char * _end )
+{
+    js_bool_t escape = JS_FALSE;
+
+    for( const char * it = _begin; it != _end; ++it )
+    {
+        char c = *it;
+
+        if( escape == JS_TRUE )
+        {
+            escape = JS_FALSE;
+
+            continue;
+        }
+
+        if( c == '\\' )
+        {
+            escape = JS_TRUE;
+
+            continue;
+        }
+
+        if( c == '"' )
+        {
+            return it;
+        }
+    }
+
+    return JS_NULLPTR;
+}
+//////////////////////////////////////////////////////////////////////////
 static js_result_t __js_parse_element( js_document_t * _document, const char ** _data, const char * _end, char _token, js_failed_fun_t _failed, void * _ud, js_element_t ** _element )
 {
     js_allocator_t * allocator = __js_document_allocator( _document );
@@ -674,7 +715,7 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
 
     if( data_soa == JS_NULLPTR )
     {
-        _failed( data_begin, _end, "parse element", _ud );
+        __js_parse_failed( _failed, data_begin, _end, "parse element", _ud );
 
         return JS_FAILURE;
     }
@@ -730,7 +771,7 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
 
                 if( data_begin == data_end )
                 {
-                    _failed( data_begin, _end, "parse element [integer]", _ud );
+                    __js_parse_failed( _failed, data_begin, _end, "parse element [integer]", _ud );
 
                     return JS_FAILURE;
                 }
@@ -752,7 +793,7 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
 
                 if( data_begin == data_end )
                 {
-                    _failed( data_begin, _end, "parse element [real]", _ud );
+                    __js_parse_failed( _failed, data_begin, _end, "parse element [real]", _ud );
 
                     return JS_FAILURE;
                 }
@@ -771,11 +812,11 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
     }
     else if( *data_soa == '"' )
     {
-        const char * data_eoa = js_strchr( data_soa + 1, _end, '"' );
+        const char * data_eoa = __js_parse_string_end( data_soa + 1, _end );
 
         if( data_eoa == JS_NULLPTR )
         {
-            _failed( data_soa + 1, _end, "parse element [string]", _ud );
+            __js_parse_failed( _failed, data_soa + 1, _end, "parse element [string]", _ud );
 
             return JS_FAILURE;
         }
@@ -833,7 +874,7 @@ static js_result_t __js_parse_element( js_document_t * _document, const char ** 
         return JS_SUCCESSFUL;
     }
 
-    _failed( data_begin, _end, "parse element", _ud );
+    __js_parse_failed( _failed, data_begin, _end, "parse element", _ud );
 
     return JS_FAILURE;
 }
@@ -907,16 +948,16 @@ static js_result_t __js_parse_object( js_document_t * _document, const char ** _
 
         if( key_begin == JS_NULLPTR )
         {
-            _failed( data_iterator, _end, "parse object [key begin]", _ud );
+            __js_parse_failed( _failed, data_iterator, _end, "parse object [key begin]", _ud );
 
             return JS_FAILURE;
         }
 
-        const char * key_end = js_strchr( key_begin + 1, _end, '"' );
+        const char * key_end = __js_parse_string_end( key_begin + 1, _end );
 
         if( key_end == JS_NULLPTR )
         {
-            _failed( key_begin + 1, _end, "parse object [key end]", _ud );
+            __js_parse_failed( _failed, key_begin + 1, _end, "parse object [key end]", _ud );
 
             return JS_FAILURE;
         }
@@ -933,7 +974,7 @@ static js_result_t __js_parse_object( js_document_t * _document, const char ** _
 
         if( value_begin == JS_NULLPTR )
         {
-            _failed( key_end + 1, _end, "parse object [value separator]", _ud );
+            __js_parse_failed( _failed, key_end + 1, _end, "parse object [value separator]", _ud );
 
             return JS_FAILURE;
         }
@@ -1720,25 +1761,42 @@ void js_array_remove( js_element_t * _document, js_element_t * _element, js_size
 
     js_element_array_t * array = JS_CAST( js_element_array_t, _element );
 
+    JS_ASSERT( array->values != JS_NULLPTR, JS_CODE_FILE, JS_CODE_LINE );
+
     js_node_t * it = array->values;
+    js_node_t * prev = JS_NULLPTR;
 
     for( js_size_t index = 0; index != _index; ++index )
     {
-        JS_ASSERT( it->next != JS_NULLPTR, JS_CODE_FILE, JS_CODE_LINE );
+        JS_ASSERT( it != JS_NULLPTR, JS_CODE_FILE, JS_CODE_LINE );
+
+        if( it == JS_NULLPTR )
+        {
+            return;
+        }
+
+        prev = it;
 
         it = it->next;
     }
 
-    js_node_t * next = it->next;
+    JS_ASSERT( it != JS_NULLPTR, JS_CODE_FILE, JS_CODE_LINE );
 
-    if( next != JS_NULLPTR )
+    if( it == JS_NULLPTR )
     {
-        it->next = next->next;
+        return;
     }
 
-    js_element_t * value = it->element;
+    js_node_t * next = it->next;
 
-    __js_element_destroy( document, value );
+    if( prev == JS_NULLPTR )
+    {
+        array->values = next;
+    }
+    else
+    {
+        prev->next = next;
+    }
 
     __js_node_destroy( document, it );
 
@@ -1753,13 +1811,13 @@ void js_array_clear( js_element_t * _document, js_element_t * _element )
 
     js_node_t * it = array->values;
 
-    for( ; it != JS_NULLPTR; it = it->next )
+    for( ; it != JS_NULLPTR; )
     {
-        js_element_t * value = it->element;
-
-        __js_element_destroy( document, value );
+        js_node_t * next = it->next;
 
         __js_node_destroy( document, it );
+
+        it = next;
     }
 
     array->values = JS_NULLPTR;
@@ -1938,7 +1996,7 @@ js_element_t * js_object_get( const js_element_t * _element, const char * _key )
         const char * key_value = key->value.value;
         js_size_t key_size = key->value.size;
 
-        if( js_strncmp( _key, key_value, key_size ) == JS_FALSE )
+        if( js_strncmp( _key, key_value, key_size ) == JS_FALSE || _key[key_size] != '\0' )
         {
             continue;
         }

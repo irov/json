@@ -107,33 +107,19 @@ static void __js_dump_integer( js_dump_ctx_t * _ctx, js_integer_t _value )
 
     char * it = symbols + JS_MAX_INTEGER_SYMBOLS;
     
-    if( _value == 0 )
+    uint64_t value_u = (_value >= 0) ? (uint64_t)_value : (uint64_t)(-(_value + 1)) + 1;
+
+    while( value_u )
     {
-        *--it = '0';
-    } 
-    else if( _value < 0 )
-    {
-        _value = -_value;
+        uint64_t symbol = value_u % 10;
+        value_u /= 10;
 
-        while( _value )
-        {
-            js_integer_t symbol = _value % 10;
-            _value /= 10;
-
-            *--it = '0' + (char)symbol;
-        }
-
-        *--it = '-';
+        *--it = '0' + (char)symbol;
     }
-    else
-    {
-        while( _value )
-        {
-            js_integer_t symbol = _value % 10;
-            _value /= 10;
 
-            *--it = '0' + (char)symbol;
-        }
+    if( _value < 0 )
+    {
+        *--it = '-';
     }
 
     js_size_t symbols_size = JS_MAX_INTEGER_SYMBOLS - (it - symbols);
@@ -184,7 +170,7 @@ static void __js_dump_double( js_dump_ctx_t * _ctx, double _value, int32_t _prec
 
     if( i == 0 )
     {
-        __js_dump_char( _ctx, '-' );
+        __js_dump_char( _ctx, '0' );
     }
     else
     {
