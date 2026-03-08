@@ -131,30 +131,25 @@ const char * js_strchr( const char * _begin, const char * _end, char _ch )
     return JS_NULLPTR;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_strncmp( const char * _s1, const char * _s2, js_size_t _n )
+js_bool_t js_strneq( const char * _s1, const char * _s2, js_size_t _n )
 {
-    if( _n == 0 )
+    for( js_size_t index = 0; index != _n; ++index )
     {
-        return JS_TRUE;
-    }
-
-    do
-    {
-        if( *_s1 != *_s2++ )
+        if( _s1[index] == '\0' )
         {
             return JS_FALSE;
         }
 
-        if( *_s1++ == '\0' )
+        if( _s1[index] != _s2[index] )
         {
-            break;
+            return JS_FALSE;
         }
-    } while( --_n );
+    }
 
-    return JS_TRUE;
+    return _s1[_n] == '\0' ? JS_TRUE : JS_FALSE;
 }
 //////////////////////////////////////////////////////////////////////////
-js_bool_t js_strzcmp( js_string_t _s1, js_string_t _s2 )
+js_bool_t js_strzeq( js_string_t _s1, js_string_t _s2 )
 {
     if( _s1.size != _s2.size )
     {

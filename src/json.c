@@ -1307,7 +1307,7 @@ static js_result_t __js_patch_object( js_document_t * _document, js_element_t * 
             const js_element_string_t * patch_key = JS_CONST_CAST( js_element_string_t, it_patch_key->element );
             const js_element_t * patch_value = it_patch_value->element;
 
-            if( js_strzcmp( object_key->value, patch_key->value ) == JS_FALSE )
+            if( js_strzeq( object_key->value, patch_key->value ) == JS_FALSE )
             {
                 continue;
             }
@@ -1996,7 +1996,7 @@ js_element_t * js_object_get( const js_element_t * _element, const char * _key )
         const char * key_value = key->value.value;
         js_size_t key_size = key->value.size;
 
-        if( js_strncmp( _key, key_value, key_size ) == JS_FALSE || _key[key_size] != '\0' )
+        if( js_strneq( _key, key_value, key_size ) == JS_FALSE )
         {
             continue;
         }
@@ -2020,7 +2020,7 @@ js_element_t * js_object_getn( const js_element_t * _object, js_string_t _key )
     {
         const js_element_string_t * key = JS_CONST_CAST( js_element_string_t, it_key->element );
 
-        if( js_strzcmp( _key, key->value ) == JS_FALSE )
+        if( js_strzeq( _key, key->value ) == JS_FALSE )
         {
             continue;
         }
